@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация — Учусь.РФ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav">
+            <div class="nav-brand"><a href="index.html">Учусь.РФ</a></div>
+            <div class="nav-links">
+                <a href="login.html" class="nav-link">Войти</a>
+                <a href="register.html" class="nav-link btn-register">Регистрация</a>
+            </div>
+        </nav>
+        <main class="main-content">
+            <div class="auth-page">
+                <div class="auth-card">
+                    <div class="auth-header">
+                        <h1>Регистрация</h1>
+                        <p>Создайте аккаунт для обучения</p>
+                    </div>
+                    <form class="auth-form" id="registerForm" onsubmit="return handleRegister(event)" novalidate>
+                        <div class="form-group">
+                            <label for="login">Логин</label>
+                            <input type="text" id="login" name="login" required minlength="6" pattern="[A-Za-z0-9]+" placeholder="Только латиница и цифры, мин. 6 символов">
+                            <span class="form-hint">Латинские буквы и цифры, минимум 6 символов</span>
+                            <span class="form-error" id="loginError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" required minlength="8" placeholder="Минимум 8 символов">
+                            <span class="form-hint">Минимум 8 символов</span>
+                            <span class="form-error" id="passwordError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="fullname">ФИО</label>
+                            <input type="text" id="fullname" name="fullname" required placeholder="Иванов Иван Иванович">
+                            <span class="form-error" id="fullnameError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Контактный телефон</label>
+                            <input type="tel" id="phone" name="phone" required placeholder="+7 (999) 123-45-67">
+                            <span class="form-error" id="phoneError"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" id="email" name="email" required placeholder="example@mail.ru">
+                            <span class="form-error" id="emailError"></span>
+                        </div>
+                        <div id="formAlert" class="form-alert form-alert-error" style="display:none;"></div>
+                        <button type="submit" class="btn btn-primary btn-full">Зарегистрироваться</button>
+                    </form>
+                    <div class="auth-footer">
+                        <a href="login.html">Уже зарегистрированы? Войти</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="footer"><p>&copy; 2026 Учусь.РФ — платформа онлайн-обучения</p></footer>
+    </div>
+    <script>
+        // Client validation
+        document.getElementById('login').addEventListener('input', function() {
+            const err = document.getElementById('loginError');
+            if (this.value.length < 6) { err.textContent = 'Логин должен содержать минимум 6 символов'; this.classList.add('error'); }
+            else if (!/^[A-Za-z0-9]+$/.test(this.value)) { err.textContent = 'Только латинские буквы и цифры'; this.classList.add('error'); }
+            else { err.textContent = ''; this.classList.remove('error'); }
+        });
+        document.getElementById('password').addEventListener('input', function() {
+            const err = document.getElementById('passwordError');
+            if (this.value.length < 8) { err.textContent = 'Пароль должен быть минимум 8 символов'; this.classList.add('error'); }
+            else { err.textContent = ''; this.classList.remove('error'); }
+        });
+        document.getElementById('phone').addEventListener('input', function() {
+            const err = document.getElementById('phoneError');
+            if (this.value.replace(/\D/g, '').length < 10) { err.textContent = 'Введите корректный номер телефона'; this.classList.add('error'); }
+            else { err.textContent = ''; this.classList.remove('error'); }
+        });
+        document.getElementById('email').addEventListener('input', function() {
+            const err = document.getElementById('emailError');
+            if (!this.value.includes('@') || !this.value.includes('.')) { err.textContent = 'Введите корректный email'; this.classList.add('error'); }
+            else { err.textContent = ''; this.classList.remove('error'); }
+        });
+        document.getElementById('fullname').addEventListener('input', function() {
+            const err = document.getElementById('fullnameError');
+            if (this.value.trim().length < 5) { err.textContent = 'Введите полное ФИО'; this.classList.add('error'); }
+            else { err.textContent = ''; this.classList.remove('error'); }
+        });
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const login = document.getElementById('login').value.trim();
+            const password = document.getElementById('password').value;
+            const fullname = document.getElementById('fullname').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const alert = document.getElementById('formAlert');
+            
+            if (!login || !password || !fullname || !phone || !email) {
+                alert.textContent = 'Заполните все поля'; alert.style.display = 'block'; return;
+            }
+            if (login.length < 6 || !/^[A-Za-z0-9]+$/.test(login)) {
+                alert.textContent = 'Логин должен быть из латиницы и цифр, минимум 6 символов'; alert.style.display = 'block'; return;
+            }
+            if (password.length < 8) {
+                alert.textContent = 'Пароль должен быть минимум 8 символов'; alert.style.display = 'block'; return;
+            }
+            
+            const users = DB.getUsers();
+            if (users.find(u => u.login === login)) {
+                alert.textContent = 'Пользователь с таким логином уже существует'; alert.style.display = 'block'; return;
+            }
+            
+            users.push({ id: Date.now(), login, password, fullname, phone, email, role: 'user' });
+            DB.saveUsers(users);
+            
+            DB.setCurrentUser({ id: Date.now(), login, fullname, phone, email, role: 'user' });
+            window.location.href = 'profile.html';
+        }
+    </script>
+</body>
+</html>

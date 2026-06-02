@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись на курс — Учусь.РФ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <nav class="top-nav">
+        <div class="nav-brand"><a href="index.html">Учусь.РФ</a></div>
+        <div class="nav-links"></div>
+    </nav>
+    <main class="main-content">
+        <div class="apply-page">
+            <div class="apply-card">
+                <div class="auth-header">
+                    <h1>Запись на курс</h1>
+                    <p>Выберите программу обучения</p>
+                </div>
+                <form class="auth-form" id="applyForm" onsubmit="return handleApply(event)">
+                    <div class="form-group">
+                        <label for="course_id">Выберите курс</label>
+                        <select id="course_id" name="course_id" required>
+                            <option value="">-- Выберите курс --</option>
+                        </select>
+                        <span class="form-error" id="courseError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="start_date">Предпочтительная дата начала</label>
+                        <input type="date" id="start_date" name="start_date" required>
+                        <span class="form-error" id="dateError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="payment_method">Способ оплаты</label>
+                        <select id="payment_method" name="payment_method" required>
+                            <option value="">-- Выберите способ оплаты --</option>
+                            <option value="Банковская карта">Банковская карта</option>
+                            <option value="Банковский перевод">Банковский перевод</option>
+                            <option value="Электронные деньги">Электронные деньги</option>
+                            <option value="Наличные">Наличные</option>
+                        </select>
+                        <span class="form-error" id="paymentError"></span>
+                    </div>
+                    <div id="formAlert" class="form-alert" style="display:none;"></div>
+                    <button type="submit" class="btn btn-primary btn-full">Отправить заявку</button>
+                </form>
+            </div>
+        </div>
+    </main>
+    <footer class="footer"><p>&copy; 2026 Учусь.РФ — платформа онлайн-обучения</p></footer>
+</div>
+<script>
+    const user = checkAuth();
+    
+    // Load courses
+    const courses = DB.getCourses();
+    const select = document.getElementById('course_id');
+    courses.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.title} (${c.type}) — ${c.price} руб.`;
+        select.appendChild(opt);
+    });
+
+    function handleApply(e) {
+        e.preventDefault();
+        const course_id = document.getElementById('course_id').value;
+        const start_date = document.getElementById('start_date').value;
+        const payment_method = document.getElementById('payment_method').value;
+        const alert = document.getElementById('formAlert');
+        
+        if (!course_id || !start_date || !payment_method) {
+            alert.className = 'form-alert form-alert-error';
+            alert.textContent = 'Заполните все поля'; alert.style.display = 'block'; return;
+        }
+        
+        const apps = DB.getApplications();
+        apps.push({
+            id: Date.now(),
+            user_id: user.id,
+            course_id: parseInt(course_id),
+            start_date: start_date,
+            payment_method: payment_method,
+            status: 'Новая',
+            created_at: new Date().toISOString()
+        });
+        DB.saveApplications(apps);
+        
+        alert.className = 'form-alert form-alert-success';
+        alert.textContent = 'Заявка успешно отправлена! Ожидайте подтверждения администратора.';
+        alert.style.display = 'block';
+        document.getElementById('applyForm').reset();
+    }
+</script>
+</body>
+</html>

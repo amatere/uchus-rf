@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет — Учусь.РФ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <nav class="top-nav">
+        <div class="nav-brand"><a href="index.html">Учусь.РФ</a></div>
+        <div class="nav-links"></div>
+    </nav>
+    <main class="main-content">
+        <div class="profile-page">
+            <div class="profile-header" id="profileHeader"></div>
+
+            <!-- Слайдер -->
+            <div class="slider-container">
+                <div class="slider">
+                    <div class="slide active">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='430' height='200'%3E%3Crect fill='%234a90e2' width='430' height='200'/%3E%3Ctext x='215' y='105' text-anchor='middle' fill='white' font-size='22' font-family='Arial'%3EКурсы повышения квалификации%3C/text%3E%3C/svg%3E" alt="Курсы 1">
+                    </div>
+                    <div class="slide">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='430' height='200'%3E%3Crect fill='%235c6bc0' width='430' height='200'/%3E%3Ctext x='215' y='105' text-anchor='middle' fill='white' font-size='22' font-family='Arial'%3EКурсы переподготовки%3C/text%3E%3C/svg%3E" alt="Курсы 2">
+                    </div>
+                    <div class="slide">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='430' height='200'%3E%3Crect fill='%2326a69a' width='430' height='200'/%3E%3Ctext x='215' y='105' text-anchor='middle' fill='white' font-size='22' font-family='Arial'%3EКурсы по охране труда%3C/text%3E%3C/svg%3E" alt="Курсы 3">
+                    </div>
+                    <div class="slide">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='430' height='200'%3E%3Crect fill='%23e74c3c' width='430' height='200'/%3E%3Ctext x='215' y='105' text-anchor='middle' fill='white' font-size='22' font-family='Arial'%3EДистанционное обучение%3C/text%3E%3C/svg%3E" alt="Курсы 4">
+                    </div>
+                </div>
+                <button class="slider-btn slider-prev" onclick="changeSlide(-1)">&#10094;</button>
+                <button class="slider-btn slider-next" onclick="changeSlide(1)">&#10095;</button>
+                <div class="slider-dots"></div>
+            </div>
+
+            <!-- Мои заявки -->
+            <section class="section">
+                <h2>Мои заявки</h2>
+                <div class="applications-list" id="appsList"></div>
+            </section>
+
+            <!-- Мои отзывы -->
+            <section class="section">
+                <h2>Мои отзывы</h2>
+                <div class="reviews-list" id="reviewsList"></div>
+            </section>
+        </div>
+    </main>
+    <footer class="footer"><p>&copy; 2026 Учусь.РФ — платформа онлайн-обучения</p></footer>
+</div>
+
+<!-- Модалка отзыва -->
+<div id="reviewModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <h2>Оставить отзыв</h2>
+        <form onsubmit="return handleReview(event)">
+            <input type="hidden" id="reviewAppId">
+            <div class="form-group">
+                <label>Оценка</label>
+                <div class="rating-select">
+                    <input type="radio" name="rating" value="1" id="star1"><label for="star1">★</label>
+                    <input type="radio" name="rating" value="2" id="star2"><label for="star2">★</label>
+                    <input type="radio" name="rating" value="3" id="star3"><label for="star3">★</label>
+                    <input type="radio" name="rating" value="4" id="star4"><label for="star4">★</label>
+                    <input type="radio" name="rating" value="5" id="star5"><label for="star5">★</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="comment">Комментарий</label>
+                <textarea name="comment" id="comment" rows="3" placeholder="Поделитесь впечатлениями о курсе..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Отправить отзыв</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const user = checkAuth();
+    
+    // Profile header
+    document.getElementById('profileHeader').innerHTML = `
+        <div class="profile-avatar"><span>${user.fullname.charAt(0).toUpperCase()}</span></div>
+        <div class="profile-info">
+            <h1>${user.fullname}</h1>
+            <p class="profile-detail"><span class="icon">📧</span> ${user.email}</p>
+            <p class="profile-detail"><span class="icon">📞</span> ${user.phone}</p>
+        </div>
+    `;
+    
+    function loadApplications() {
+        const apps = DB.getApplications().filter(a => a.user_id === user.id);
+        const courses = DB.getCourses();
+        const container = document.getElementById('appsList');
+        
+        if (apps.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>У вас пока нет заявок</p><a href="apply.html" class="btn btn-primary">Записаться на курс</a></div>';
+            return;
+        }
+        
+        container.innerHTML = apps.map(app => {
+            const course = courses.find(c => c.id === app.course_id);
+            const statusClass = app.status === 'Новая' ? 'new' : app.status === 'Идет обучение' ? 'in-progress' : 'completed';
+            const date = new Date(app.start_date).toLocaleDateString('ru-RU');
+            const created = new Date(app.created_at).toLocaleString('ru-RU');
+            const reviewBtn = app.status === 'Обучение завершено' ? `<button class="btn btn-secondary btn-sm open-review" onclick="openReview(${app.id})">Оставить отзыв</button>` : '';
+            return `<div class="application-card status-${statusClass}">
+                <div class="app-header"><h3>${course ? course.title : 'Курс удалён'}</h3><span class="status-badge status-${statusClass}">${app.status}</span></div>
+                <div class="app-details">
+                    <p><span class="label">Дата старта:</span> ${date}</p>
+                    <p><span class="label">Способ оплаты:</span> ${app.payment_method}</p>
+                    <p><span class="label">Дата заявки:</span> ${created}</p>
+                </div>
+                ${reviewBtn}
+            </div>`;
+        }).join('');
+    }
+    
+    function loadReviews() {
+        const reviews = DB.getReviews().filter(r => r.user_id === user.id);
+        const courses = DB.getCourses();
+        const container = document.getElementById('reviewsList');
+        
+        if (reviews.length === 0) {
+            container.innerHTML = '<p class="empty-text">Вы ещё не оставляли отзывов</p>';
+            return;
+        }
+        
+        container.innerHTML = reviews.map(rev => {
+            const course = courses.find(c => c.id === rev.course_id);
+            let stars = '';
+            for (let i = 0; i < 5; i++) stars += `<span class="star ${i < rev.rating ? 'filled' : ''}">★</span>`;
+            return `<div class="review-card">
+                <div class="review-header">
+                    <span class="review-course">${course ? course.title : 'Курс удалён'}</span>
+                    <span class="review-date">${new Date(rev.created_at).toLocaleDateString('ru-RU')}</span>
+                </div>
+                <div class="review-rating">${stars}</div>
+                <p class="review-text">${rev.comment || 'Без комментария'}</p>
+            </div>`;
+        }).join('');
+    }
+    
+    function openReview(appId) {
+        document.getElementById('reviewAppId').value = appId;
+        document.getElementById('reviewModal').style.display = 'flex';
+    }
+    
+    function handleReview(e) {
+        e.preventDefault();
+        const appId = parseInt(document.getElementById('reviewAppId').value);
+        const rating = document.querySelector('input[name="rating"]:checked');
+        const comment = document.getElementById('comment').value;
+        const alert = document.querySelector('#reviewModal .form-alert');
+        
+        if (!rating) { alert('Выберите оценку'); return; }
+        
+        const reviews = DB.getReviews();
+        if (reviews.find(r => r.application_id === appId)) { alert('Отзыв уже оставлен'); return; }
+        
+        const app = DB.getApplications().find(a => a.id === appId);
+        reviews.push({
+            id: Date.now(),
+            user_id: user.id,
+            application_id: appId,
+            course_id: app ? app.course_id : 0,
+            rating: parseInt(rating.value),
+            comment: comment,
+            created_at: new Date().toISOString()
+        });
+        DB.saveReviews(reviews);
+        
+        document.getElementById('reviewModal').style.display = 'none';
+        loadReviews();
+    }
+    
+    loadApplications();
+    loadReviews();
+</script>
+</body>
+</html>

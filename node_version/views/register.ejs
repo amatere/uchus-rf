@@ -1,0 +1,46 @@
+<%- include('header', { title: 'Регистрация — Учусь.РФ', user: locals.user }) %>
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Регистрация</h1>
+            <p>Создайте аккаунт для обучения</p>
+        </div>
+        <form action="/register" method="POST" class="auth-form" id="registerForm" novalidate>
+            <div class="form-group">
+                <label for="login">Логин</label>
+                <input type="text" id="login" name="login" required minlength="6" pattern="[A-Za-z0-9]+" placeholder="Только латиница и цифры, мин. 6 символов" value="<%= locals.formData && formData.login ? formData.login : '' %>">
+                <span class="form-hint">Латинские буквы и цифры, минимум 6 символов</span>
+                <span class="form-error" id="loginError"></span>
+            </div>
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required minlength="8" placeholder="Минимум 8 символов">
+                <span class="form-hint">Минимум 8 символов</span>
+                <span class="form-error" id="passwordError"></span>
+            </div>
+            <div class="form-group">
+                <label for="fullname">ФИО</label>
+                <input type="text" id="fullname" name="fullname" required placeholder="Иванов Иван Иванович" value="<%= locals.formData && formData.fullname ? formData.fullname : '' %>">
+                <span class="form-error" id="fullnameError"></span>
+            </div>
+            <div class="form-group">
+                <label for="phone">Контактный телефон</label>
+                <input type="tel" id="phone" name="phone" required placeholder="+7 (999) 123-45-67" value="<%= locals.formData && formData.phone ? formData.phone : '' %>">
+                <span class="form-error" id="phoneError"></span>
+            </div>
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" required placeholder="example@mail.ru" value="<%= locals.formData && formData.email ? formData.email : '' %>">
+                <span class="form-error" id="emailError"></span>
+            </div>
+            <% if (locals.error) { %>
+                <div class="form-alert form-alert-error"><%= error %></div>
+            <% } %>
+            <button type="submit" class="btn btn-primary btn-full">Зарегистрироваться</button>
+        </form>
+        <div class="auth-footer">
+            <a href="/login">Уже зарегистрированы? Войти</a>
+        </div>
+    </div>
+</div>
+<%- include('footer') %>

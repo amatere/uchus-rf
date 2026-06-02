@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель — Учусь.РФ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <nav class="top-nav">
+        <div class="nav-brand"><a href="index.html">Учусь.РФ</a></div>
+        <div class="nav-links"></div>
+    </nav>
+    <main class="main-content">
+        <div class="admin-page">
+            <div class="admin-header">
+                <h1>Панель управления</h1>
+                <p>Управление заявками пользователей</p>
+            </div>
+
+            <!-- Фильтры -->
+            <div class="admin-filters">
+                <div class="filter-group">
+                    <label for="filterStatus">Статус:</label>
+                    <select id="filterStatus" onchange="applyFilters()">
+                        <option value="all">Все статусы</option>
+                        <option value="Новая">Новая</option>
+                        <option value="Идет обучение">Идет обучение</option>
+                        <option value="Обучение завершено">Обучение завершено</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterSearch">Поиск:</label>
+                    <input type="text" id="filterSearch" placeholder="Поиск по ФИО..." oninput="applyFilters()">
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="admin-stats" id="adminStats"></div>
+
+            <!-- Таблица заявок -->
+            <div class="table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">ID</th>
+                            <th onclick="sortTable(1)">Пользователь</th>
+                            <th onclick="sortTable(2)">Курс</th>
+                            <th onclick="sortTable(3)">Дата старта</th>
+                            <th onclick="sortTable(4)">Оплата</th>
+                            <th onclick="sortTable(5)">Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Пагинация -->
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </main>
+    <footer class="footer"><p>&copy; 2026 Учусь.РФ — платформа онлайн-обучения</p></footer>
+</div>
+
+<!-- Модалка уведомления -->
+<div id="notifyModal" class="modal">
+    <div class="modal-content modal-small">
+        <span class="modal-close">&times;</span>
+        <div class="modal-icon">✅</div>
+        <h2 id="notifyTitle">Статус обновлён</h2>
+        <p id="notifyMessage">Статус заявки успешно изменён</p>
+        <button class="btn btn-primary btn-full modal-close-btn">ОК</button>
+    </div>
+</div>
+
+<script>
+    const user = checkAuth();
+    if (user.role !== 'admin') { window.location.href = 'profile.html'; }
+    
+    let currentPage = 1;
+    const perPage = 10;
+    let allApps = [];
+    
+    function loadData() {
+        const apps = DB.getApplications();
+        const users = DB.getUsers();
+        const courses = DB.getCourses();
+        
+        allApps = apps.map(a => {
+            const u = users.find(usr => usr.id === a.user_id);
+            const c = courses.find(crs => crs.id === a.course_id);
+            return { ...a, user_name: u ? u.fullname : 'Неизвестно', user_login: u ? u.login : '', course_title: c ? c.title : 'Курс удалён', course_id: a.course_id };
+        }).sort((a, b) => b.id - a.id);
+        
+        updateStats();
+        renderTable();
+    }
+    
+    function updateStats() {
+        const total = allApps.length;
+        const newApps = allApps.filter(a => a.status === 'Новая').length;
+        const progress = allApps.filter(a => a.status === 'Идет обучение').length;
+        const done = allApps.filter(a => a.status === 'Обучение завершено').length;
+        
+        document.getElementById('adminStats').innerHTML = `
+            <div class="stat-card"><span class="stat-number">${total}</span><span class="stat-label">Всего заявок</span></div>
+            <div class="stat-card stat-new"><span class="stat-number">${newApps}</span><span class="stat-label">Новые</span></div>
+            <div class="stat-card stat-progress"><span class="stat-number">${progress}</span><span class="stat-label">В обучении</span></div>
+            <div class="stat-card stat-done"><span class="stat-number">${done}</span><span class="stat-label">Завершено</span></div>
+        `;
+    }
+    
+    function renderTable() {
+        const status = document.getElementById('filterStatus').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase();
+        
+        let filtered = allApps.filter(a => {
+            const matchStatus = status === 'all' || a.status === status;
+            const matchSearch = !search || a.user_name.toLowerCase().includes(search) || a.user_login.toLowerCase().includes(search);
+            return matchStatus && matchSearch;
+        });
+        
+        const totalPages = Math.ceil(filtered.length / perPage);
+        if (currentPage > totalPages) currentPage = 1;
+        
+        const start = (currentPage - 1) * perPage;
+        const pageData = filtered.slice(start, start + perPage);
+        
+        const tbody = document.getElementById('tableBody');
+        if (pageData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Заявок пока нет</td></tr>';
+        } else {
+            tbody.innerHTML = pageData.map(a => {
+                const statusClass = a.status === 'Новая' ? 'new' : a.status === 'Идет обучение' ? 'in-progress' : 'completed';
+                const date = new Date(a.start_date).toLocaleDateString('ru-RU');
+                return `<tr data-id="${a.id}">
+                    <td>${a.id}</td>
+                    <td>${a.user_name}<br><small>${a.user_login}</small></td>
+                    <td>${a.course_title}</td>
+                    <td>${date}</td>
+                    <td>${a.payment_method}</td>
+                    <td><span class="status-badge status-${statusClass}">${a.status}</span></td>
+                    <td>
+                        <select class="status-select" onchange="changeStatus(${a.id}, this.value)">
+                            <option value="Новая" ${a.status === 'Новая' ? 'selected' : ''}>Новая</option>
+                            <option value="Идет обучение" ${a.status === 'Идет обучение' ? 'selected' : ''}>Идет обучение</option>
+                            <option value="Обучение завершено" ${a.status === 'Обучение завершено' ? 'selected' : ''}>Обучение завершено</option>
+                        </select>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // Pagination
+        const pag = document.getElementById('pagination');
+        if (totalPages <= 1) { pag.innerHTML = ''; return; }
+        let phtml = '';
+        for (let i = 1; i <= totalPages; i++) {
+            phtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="currentPage=${i};renderTable();">${i}</button>`;
+        }
+        pag.innerHTML = phtml;
+    }
+    
+    function applyFilters() { currentPage = 1; renderTable(); }
+    
+    function sortTable(col) {
+        allApps.sort((a, b) => {
+            const vals = [a.id, a.user_name, a.course_title, a.start_date, a.payment_method, a.status];
+            const va = String(vals[col] || '');
+            const vb = String(vals[col] || '');
+            return va.localeCompare(vb, 'ru');
+        });
+        renderTable();
+    }
+    
+    function changeStatus(id, newStatus) {
+        const apps = DB.getApplications();
+        const idx = apps.findIndex(a => a.id === id);
+        if (idx !== -1) {
+            apps[idx].status = newStatus;
+            DB.saveApplications(apps);
+            document.getElementById('notifyTitle').textContent = 'Статус обновлён';
+            document.getElementById('notifyMessage').textContent = `Заявка #${id} теперь имеет статус «${newStatus}»`;
+            document.getElementById('notifyModal').style.display = 'flex';
+            loadData();
+        }
+    }
+    
+    loadData();
+</script>
+</body>
+</html>
